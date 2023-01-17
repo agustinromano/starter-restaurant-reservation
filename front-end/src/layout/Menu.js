@@ -1,4 +1,5 @@
 import React from "react";
+
 import { Link } from "react-router-dom";
 
 /**
@@ -9,44 +10,45 @@ import { Link } from "react-router-dom";
 
 function Menu() {
   return (
-    <div className="group">
-      <header>
-        <Link to="/">
-          <h1>Periodic Tables</h1>
+    <nav className="navbar navbar-dark align-items-start p-0">
+      <div className="container-fluid d-flex flex-column p-0">
+        <Link
+          className="navbar-brand d-flex justify-content-center align-items-center sidebar-brand m-0"
+          to="/"
+        >
+          <div className="sidebar-brand-text mx-3">
+            <span>Periodic Tables</span>
+          </div>
         </Link>
-      </header>
-      <nav>
-        <div>
-          <ul className="group-col no-gap">
-            <li className="item">
-              <Link to="/dashboard">
-                <span />
-                &nbsp;Dashboard
-              </Link>
-            </li>
-            <li className="item">
-              <Link to="/search">
-                <span />
-                &nbsp;Search
-              </Link>
-            </li>
-            <li className="item">
-              <Link to="/reservations/new">
-                <span />
-                &nbsp;New Reservation
-              </Link>
-            </li>
-            <li className="item">
-              <Link to="/tables/new">
-                <span />
-                &nbsp;New Table
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </nav>
-      <hr />
-    </div>
+        <hr className="sidebar-divider my-0" />
+        <ul className="nav navbar-nav text-light" id="accordionSidebar">
+          <li className="nav-item">
+            <Link className="nav-link" to="/dashboard">
+              <span className="oi oi-dashboard" />
+              <span className="navText">&nbsp;&nbsp;Dashboard </span>
+            </Link>
+          </li>
+          <li className="nav-item">
+            <Link className="nav-link" to="/search">
+              <span className="oi oi-magnifying-glass" />
+              <span className="navText">&nbsp;&nbsp;Search </span>
+            </Link>
+          </li>
+          <li className="nav-item">
+            <Link className="nav-link" to="/reservations/new">
+              <span className="oi oi-plus" />
+              <span className="navText">&nbsp;&nbsp;New Reservation </span>
+            </Link>
+          </li>
+          <li className="nav-item">
+            <Link className="nav-link" to="/tables/new">
+              <span className="oi oi-layers" />
+              <span className="navText">&nbsp;&nbsp;New Table </span>
+            </Link>
+          </li>
+        </ul>
+      </div>
+    </nav>
   );
 }
 
