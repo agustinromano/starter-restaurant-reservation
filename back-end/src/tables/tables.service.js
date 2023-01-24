@@ -1,54 +1,74 @@
 const knex = require("../db/connection");
 
-async function list() {
+function list() {
   return knex("tables").select("*").orderBy("table_name");
 }
 
-// list tables that are not occupied
-async function listFree(/* minCapacity */) {
-  //filters list of tables by capacity. This functionality breaks testing but I want to implement it for portfolio.
-  return (
-    knex("tables")
-      .select("*")
-      .where({ reservation_id: null })
-      // .andWhere("capacity", ">=", minCapacity)   filters list of tables by capacity. This functionality breaks testing but I want to implement it for portfolio.
-      .orderBy("table_name")
-  );
-}
-
-async function create(table) {
+function create(newTable) {
   return knex("tables")
-    .insert(table)
+    .insert({
+      ...newTable,
+      table_status: newTable.reservation_id ? "occupied" : "free",
+    })
     .returning("*")
-    .then((createdRecords) => createdRecords[0]);
+    .then((result) => result[0]);
 }
 
-async function read(table_id) {
+function readReservation(reservation_id) {
+  return knex("reservations").select("*").where({ reservation_id }).first();
+}
+
+function readTable(table_id) {
   return knex("tables").select("*").where({ table_id }).first();
 }
 
-// uses knex transaction to update a table and a reservation at the same time
-async function update(updatedTable, updatedReservation) {
-  const trx = await knex.transaction();
+function readTableByReservation(reservation_id) {
+  return knex("tables")
+    .where({ reservation_id })
+    .whereExists(knex.select("*").from("tables").where({ reservation_id }))
+    .then((result) => result[0]);
+}
 
-  return trx("tables")
-    .select("*")
-    .where({ table_id: updatedTable.table_id })
-    .update(updatedTable, "*")
-    .then(function () {
-      return trx("reservations")
-        .select("*")
-        .where({ reservation_id: updatedReservation.reservation_id })
-        .update(updatedReservation, "*");
+async function update(reservation_id, table_id) {
+  return knex("tables")
+    .where({ table_id: Number(table_id) })
+    .select("reservation_id", "table_status")
+    .update({
+      reservation_id: Number(reservation_id),
+      table_status: "occupied",
     })
-    .then(trx.commit)
-    .catch(trx.rollback);
+    .then(() =>
+      knex("reservations")
+        .where({ reservation_id: Number(reservation_id) })
+        .update({ status: "seated" })
+    );
+}
+
+async function readReservationByTableId(table_id) {
+  return knex("tables").select("reservation_id").where({ table_id }).first();
+}
+
+async function deleteTableReservation(table_id, reservation_id) {
+  return knex("tables")
+    .where({ table_id: Number(table_id) })
+    .update({
+      reservation_id: null,
+      table_status: "free",
+    })
+    .then(() =>
+      knex("reservations")
+        .where({ reservation_id: Number(reservation_id) })
+        .update({ status: "finished" })
+    );
 }
 
 module.exports = {
   list,
   create,
-  listFree,
-  read,
+  readReservation,
+  readTable,
+  readTableByReservation,
+  readReservationByTableId,
   update,
+  deleteTableReservation,
 };

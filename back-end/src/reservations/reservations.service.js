@@ -1,15 +1,21 @@
 const knex = require("../db/connection");
 
-async function list(date) {
+function list() {
   return knex("reservations")
     .select("*")
-    .where({ status: "booked", reservation_date: date })
-    .orWhere({ status: "seated", reservation_date: date })
+    .whereNot({ status: "finished" })
     .orderBy("reservation_time");
 }
 
-// list of reservations that match search criteria (phone number)
-async function searchList(mobile_number) {
+function listByDate(reservation_date) {
+  return knex("reservations")
+    .select("*")
+    .where({ reservation_date })
+    .whereNot({ status: "finished" })
+    .orderBy("reservation_time");
+}
+
+function search(mobile_number) {
   return knex("reservations")
     .whereRaw(
       "translate(mobile_number, '() -', '') like ?",
@@ -18,36 +24,58 @@ async function searchList(mobile_number) {
     .orderBy("reservation_date");
 }
 
-function create(reservation) {
+function create(newReservation) {
   return knex("reservations")
-    .insert(reservation)
+    .insert({ ...newReservation, status: "booked" })
     .returning("*")
-    .then((createdRecords) => createdRecords[0]);
+    .then((newReservation) => newReservation[0]);
 }
 
 function read(reservation_id) {
-  return knex("reservations").select("*").where({ reservation_id }).first();
-}
-
-function updateStatus(updatedReservation) {
   return knex("reservations")
     .select("*")
-    .where({ reservation_id: updatedReservation.reservation_id })
-    .update(updatedReservation, "*");
+    .where({ reservation_id })
+    .then((result) => result[0]);
 }
 
-function update(updatedReservation) {
+function update(reservation_id) {
   return knex("reservations")
-    .select("*")
-    .where({ reservation_id: updatedReservation.reservation_id })
-    .update(updatedReservation, "*");
+    .where({ reservation_id })
+    .update({ status: "seated" });
+}
+
+function updateReservationStatus(reservation_id, newStatus) {
+  return knex("reservations")
+    .where({ reservation_id })
+    .update({ status: newStatus })
+    .returning("*")
+    .then((result) => result[0]);
+}
+
+function updateReservation(reservation) {
+  const {
+    reservation_id,
+    first_name,
+    last_name,
+    mobile_number,
+    reservation_date,
+    reservation_time,
+    people,
+  } = reservation;
+  return knex("reservations")
+    .where({ reservation_id })
+    .update(reservation, "*")
+    .returning("*")
+    .then((updated) => updated[0]);
 }
 
 module.exports = {
   list,
-  searchList,
+  listByDate,
+  search,
   create,
   read,
-  updateStatus,
   update,
+  updateReservationStatus,
+  updateReservation,
 };

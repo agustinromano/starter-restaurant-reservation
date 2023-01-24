@@ -1,7 +1,6 @@
-function hasProperties(...properties) {
+function requiredProperties(...properties) {
   return function (req, res, next) {
     const { data = {} } = req.body;
-
     try {
       properties.forEach((property) => {
         if (!data[property]) {
@@ -17,4 +16,4 @@ function hasProperties(...properties) {
   };
 }
 
-module.exports = hasProperties;
+module.exports = requiredProperties;
