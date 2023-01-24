@@ -1,74 +1,35 @@
 const knex = require("../db/connection");
 
-function list() {
-  return knex("tables").select("*").orderBy("table_name");
-}
-
-function create(newTable) {
+// CREATE
+async function create(newTable) {
   return knex("tables")
-    .insert({
-      ...newTable,
-      table_status: newTable.reservation_id ? "occupied" : "free",
-    })
+    .insert(newTable)
     .returning("*")
-    .then((result) => result[0]);
+    .then((created) => created[0]);
 }
 
-function readReservation(reservation_id) {
-  return knex("reservations").select("*").where({ reservation_id }).first();
+// LIST
+async function list() {
+  return knex("tables").select("*").orderBy("table_name", "asc");
 }
 
-function readTable(table_id) {
+// READ
+async function read(table_id) {
   return knex("tables").select("*").where({ table_id }).first();
 }
 
-function readTableByReservation(reservation_id) {
+// UPDATE
+async function update(updatedTable) {
   return knex("tables")
-    .where({ reservation_id })
-    .whereExists(knex.select("*").from("tables").where({ reservation_id }))
-    .then((result) => result[0]);
-}
-
-async function update(reservation_id, table_id) {
-  return knex("tables")
-    .where({ table_id: Number(table_id) })
-    .select("reservation_id", "table_status")
-    .update({
-      reservation_id: Number(reservation_id),
-      table_status: "occupied",
-    })
-    .then(() =>
-      knex("reservations")
-        .where({ reservation_id: Number(reservation_id) })
-        .update({ status: "seated" })
-    );
-}
-
-async function readReservationByTableId(table_id) {
-  return knex("tables").select("reservation_id").where({ table_id }).first();
-}
-
-async function deleteTableReservation(table_id, reservation_id) {
-  return knex("tables")
-    .where({ table_id: Number(table_id) })
-    .update({
-      reservation_id: null,
-      table_status: "free",
-    })
-    .then(() =>
-      knex("reservations")
-        .where({ reservation_id: Number(reservation_id) })
-        .update({ status: "finished" })
-    );
+    .select("*")
+    .where({ table_id: updatedTable.table_id })
+    .update(updatedTable, "*")
+    .then((updated) => updated[0]);
 }
 
 module.exports = {
-  list,
   create,
-  readReservation,
-  readTable,
-  readTableByReservation,
-  readReservationByTableId,
+  list,
+  read,
   update,
-  deleteTableReservation,
 };

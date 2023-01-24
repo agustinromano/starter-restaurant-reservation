@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { listReservations, listTables } from "../utils/api";
-import ErrorAlert from "../layout/ErrorAlert";
 import { useHistory } from "react-router-dom";
-import { previous, next } from "../utils/date-time";
-import ReservationsTable from "./ReservationsTable";
-import TablesTable from "./TablesTable";
+import useQuery from "../utils/useQuery";
+import { listReservations, listTables } from "../utils/api";
+import { next, previous, today } from "../utils/date-time";
+import ViewReservation from "../reservations/ViewReservation";
+import Tables from "../tables/Tables";
 
 /**
  * Defines the dashboard page.
@@ -12,69 +12,119 @@ import TablesTable from "./TablesTable";
  *  the date for which the user wants to view reservations.
  * @returns {JSX.Element}
  */
+
 function Dashboard({ date }) {
   const [reservations, setReservations] = useState([]);
+
   const [tables, setTables] = useState([]);
-  const [reservationsError, setReservationsError] = useState(null);
+
   const history = useHistory();
+ //will use date from url for each new date
+ const dateQuery = useQuery().get("date");
+ if (dateQuery) {
+   date = dateQuery;
+ }
 
-  useEffect(loadDashboard, [date]);
-
-  function loadDashboard() {
+ const dateObj = new Date(`${date} PDT`)
+ const dateString = dateObj.toDateString();
+  /**
+   * calling on the api to get our reservations by
+   * a specific date.
+   * @returns listReservations & tables
+   */
+  useEffect(() => {
     const abortController = new AbortController();
-    setReservationsError(null);
-    listReservations({ date }, abortController.signal)
-      .then(setReservations)
-      .catch(setReservationsError);
-    listTables(abortController.signal).then(setTables);
+
+    async function loadDashboard() {
+      try {
+        const reservationDate = await listReservations({ date }, abortController.signal);
+        setReservations(reservationDate);
+      } catch (error) {
+        setReservations([]);
+      }
+    }
+    loadDashboard();
     return () => abortController.abort();
-  }
+  }, [date]);
 
-  function handleToday() {
-    history.push(`/dashboard`);
-  }
+  //Load tables
+  useEffect(() => {
+    const abortController = new AbortController();
 
-  function handlePrev() {
-    const newDate = previous(date);
-    history.push(`/dashboard?date=${newDate}`);
-  }
+    async function loadTables() {
+      try {
+        const tableList = await listTables(abortController.signal);
+        setTables(tableList);
+      } catch (error) {
+        setTables([]);
+      }
+    }
+    loadTables();
+    return () => abortController.abort();
+  }, []);
 
-  function handleNext() {
-    history.push(`/dashboard?date=${next(date)}`);
-  }
+
+  /**
+   * @reservationlist fetches customers with dates of today, tomorrow, or previous date.
+   * @tablesList fetches ....
+   */
+  const reservationList = reservations.map((reservation) => {
+    if (reservation.status === "cancelled" || reservation.status === "finished")
+      return null;
+    return (
+      <ViewReservation
+        key={reservation.reservation_id}
+        reservation={reservation}
+      />
+    );
+  });
+
+  const tablesList = tables.map((table) => (
+    <Tables key={table.table_id} table={table} />
+  ));
+  /**
+   * @previous date - needs to call a function instead of an object when inside the return ui
+   */
 
   return (
     <main>
-      <h1>Dashboard</h1>
-      <div className="row">
-        <div className="col-md-6 col-lg-6 col-sm-12">
-          <div className="d-md-flex mb-3">
-            <h4 className="box-title mb-0">Reservations for {date}</h4>
-          </div>
-          <button className="btn btn-secondary" onClick={handlePrev}>
-            Previous
-          </button>
-          <button className="btn btn-secondary" onClick={handleToday}>
-            Today
-          </button>
-          <button className="btn btn-secondary" onClick={handleNext}>
-            Next
-          </button>
-          <div>
-            <ErrorAlert error={reservationsError} />
-          </div>
-          <div className="table-responsive">
-            <ReservationsTable
-              reservations={reservations}
-              loadDashboard={loadDashboard}
-            />
-          </div>
-        </div>
-        <div className="col-md-6 col-lg-6 col-sm-12">
-          <div className="table-responsive">
-            <TablesTable tables={tables} loadDashboard={loadDashboard} />
-          </div>
-        </div>
+      <div >
+      <h1 className="text-center">
+        Dashboard
+      </h1>
+      <div className="d-md-flex justify-content-center mb-3">
+        <button
+          className="btn btn-outline-dark"
+          onClick={() => history.push(`/dashboard?date=${previous(date)}`)}
+        >
+          Previous
+        </button>
+        &nbsp;
+        <button
+          className="btn btn-info"
+          onClick={() => history.push(`/dashboard?date=${today()}`)}
+        >
+          Today
+        </button>
+        &nbsp;
+        <button
+          className="btn btn-outline-dark"
+          onClick={() => history.push(`/dashboard?date=${next(date)}`)}
+        >Next
+        </button>
+      </div>
+
+      <h4 className="text-center">Reservations for: {dateString}</h4>
+      </div>
+      <div className="dashboard table-display row mx-1">
+      <div className="col scroll-me">
+        <h3>Reservations</h3>
+        <div>{reservationList}</div>
+      </div>
+      <div className="col">
+        <h3>Tables</h3>
+        <div>{tablesList}</div>
+      </div>
       </div>
     </main>
   );
